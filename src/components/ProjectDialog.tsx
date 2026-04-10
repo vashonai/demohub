@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,12 +6,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { AppData } from '@/src/data/apps';
+} from "@/src/components/ui/dialog";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
+import { Textarea } from "@/src/components/ui/textarea";
+import { Button } from "@/src/components/ui/button";
+import { AppData } from "@/src/data/apps";
 
 interface ProjectDialogProps {
   isOpen: boolean;
@@ -20,31 +20,36 @@ interface ProjectDialogProps {
   initialData?: AppData;
 }
 
-export function ProjectDialog({ isOpen, onClose, onSave, initialData }: ProjectDialogProps) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [lead, setLead] = useState('');
-  const [demoUrl, setDemoUrl] = useState('');
-  const [docsUrl, setDocsUrl] = useState('');
-  const [category, setCategory] = useState('Internal Project');
+export function ProjectDialog({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+}: ProjectDialogProps) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [lead, setLead] = useState("");
+  const [demoUrl, setDemoUrl] = useState("");
+  const [docsUrl, setDocsUrl] = useState("");
+  const [category, setCategory] = useState("Internal Project");
 
   // Reset or populate form when dialog opens
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        setName(initialData.name || '');
-        setDescription(initialData.description || '');
-        setLead(initialData.lead || '');
-        setDemoUrl(initialData.demoUrl || '');
-        setDocsUrl(initialData.docsUrl || '');
-        setCategory(initialData.category || 'Internal Project');
+        setName(initialData.name || "");
+        setDescription(initialData.description || "");
+        setLead(initialData.lead || "");
+        setDemoUrl(initialData.demoUrl || "");
+        setDocsUrl(initialData.docsUrl || "");
+        setCategory(initialData.category || "Internal Project");
       } else {
-        setName('');
-        setDescription('');
-        setLead('');
-        setDemoUrl('');
-        setDocsUrl('');
-        setCategory('Internal Project');
+        setName("");
+        setDescription("");
+        setLead("");
+        setDemoUrl("");
+        setDocsUrl("");
+        setCategory("Internal Project");
       }
     }
   }, [isOpen, initialData]);
@@ -59,12 +64,12 @@ export function ProjectDialog({ isOpen, onClose, onSave, initialData }: ProjectD
       lead,
       demoUrl,
       docsUrl,
-      category: category || 'Internal Project', // Use the inputted category or default
-      icon: initialData?.icon || 'Briefcase',
-      status: initialData?.status || 'active',
-      lastUpdated: new Date().toISOString().split('T')[0], // Always update timestamp on save
+      category: category || "Internal Project", // Use the inputted category or default
+      icon: initialData?.icon || "Briefcase",
+      status: initialData?.status || "active",
+      lastUpdated: new Date().toISOString().split("T")[0], // Always update timestamp on save
     });
-    
+
     onClose();
   };
 
@@ -72,16 +77,20 @@ export function ProjectDialog({ isOpen, onClose, onSave, initialData }: ProjectD
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{initialData ? 'Edit Project' : 'Add New Project'}</DialogTitle>
+          <DialogTitle>
+            {initialData ? "Edit Project" : "Add New Project"}
+          </DialogTitle>
           <DialogDescription>
-            {initialData 
+            {initialData
               ? "Update the details of this project below. Click save when you're done."
               : "Enter the details for the new project here. Click save when you're done."}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Project Name <span className="text-destructive">*</span></Label>
+            <Label htmlFor="name">
+              Project Name <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="name"
               placeholder="e.g. AI Optimization Pipeline"
@@ -138,8 +147,12 @@ export function ProjectDialog({ isOpen, onClose, onSave, initialData }: ProjectD
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!name.trim()}>Save details</Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={!name.trim()}>
+            Save details
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
