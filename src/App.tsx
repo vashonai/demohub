@@ -62,6 +62,7 @@ export default function App() {
 
   const [apps, setApps] = useState<AppData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProjects();
@@ -69,15 +70,21 @@ export default function App() {
 
   async function fetchProjects() {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('name', { ascending: true });
-      
-    if (error) {
-      console.error('Error fetching projects:', error);
-    } else {
-      setApps(data as AppData[]);
+    setErrorMsg(null);
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('name', { ascending: true });
+        
+      if (error) {
+        console.error('Error fetching projects:', error);
+        setErrorMsg('Error fetching: ' + error.message);
+      } else {
+        setApps(data as AppData[]);
+      }
+    } catch (err: any) {
+      setErrorMsg('Fetch caught error: ' + err?.message);
     }
     setIsLoading(false);
   }
@@ -93,9 +100,10 @@ export default function App() {
         .eq('id', editingProject.id);
 
       if (!error) {
-        setApps(apps.map((app) => (app.id === editingProject.id ? { ...app, ...projectData } as AppData : app)));
+        await fetchProjects(); // sync
       } else {
         console.error('Error updating project:', error);
+        setErrorMsg('Update failed: ' + error.message);
       }
     } else {
       const { data, error } = await supabase
@@ -104,9 +112,10 @@ export default function App() {
         .select();
 
       if (!error && data) {
-        setApps([data[0] as AppData, ...apps]);
+        await fetchProjects(); // sync
       } else {
          console.error('Error adding project:', error);
+         setErrorMsg('Insert failed: ' + error.message);
       }
     }
   };
@@ -118,9 +127,11 @@ export default function App() {
       .eq('id', id);
 
     if (!error) {
-      setApps(apps.filter(app => app.id !== id));
+      // Forcefully refresh data directly from DB to mimic automatic refresh expectations
+      await fetchProjects(); 
     } else {
        console.error('Error deleting project:', error);
+       setErrorMsg('Delete failed: ' + error.message);
     }
   };
 
@@ -142,9 +153,9 @@ export default function App() {
       })
       .sort((a, b) => {
         if (sortBy === 'name') {
-          return a.name.localeCompare(b.name);
+          return (a.name || '').localeCompare(b.name || '');
         } else {
-          return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
+          return new Date(b.lastUpdated || Date.now()).getTime() - new Date(a.lastUpdated || Date.now()).getTime();
         }
       });
   }, [searchQuery, categoryFilter, demoFilter, sortBy]);
@@ -204,6 +215,13 @@ export default function App() {
             Streamline your workflow and stay updated with the latest releases.
           </p>
         </div>
+
+        {errorMsg && (
+          <div className="bg-destructive/15 text-destructive p-4 rounded-md mb-6 border border-destructive/30">
+            <h3 className="font-semibold">Oops! Something went wrong</h3>
+            <p className="text-sm">{errorMsg}</p>
+          </div>
+        )}
 
         {/* Controls */}
         <div className="flex flex-col gap-6 mb-8">
