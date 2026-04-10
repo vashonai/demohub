@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
@@ -22,7 +22,9 @@ import {
   MoreVertical
 } from 'lucide-react';
 
-import { applications, AppData } from './data/apps';
+import { AppData } from './data/apps';
+import { supabase } from './lib/supabase';
+import { ProjectDialog } from '@/components/ProjectDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,16 +60,80 @@ export default function App() {
   const [sortBy, setSortBy] = useState<'name' | 'date'>('name');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const categories = useMemo(() => {
-    const cats = new Set(applications.map(app => app.category));
-    return ['all', ...Array.from(cats)];
+  const [apps, setApps] = useState<AppData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProjects();
   }, []);
 
+  async function fetchProjects() {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('name', { ascending: true });
+      
+    if (error) {
+      console.error('Error fetching projects:', error);
+    } else {
+      setApps(data as AppData[]);
+    }
+    setIsLoading(false);
+  }
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<AppData | undefined>(undefined);
+
+  const handleSaveProject = async (projectData: Partial<AppData>) => {
+    if (editingProject) {
+      const { error } = await supabase
+        .from('projects')
+        .update(projectData)
+        .eq('id', editingProject.id);
+
+      if (!error) {
+        setApps(apps.map((app) => (app.id === editingProject.id ? { ...app, ...projectData } as AppData : app)));
+      } else {
+        console.error('Error updating project:', error);
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert([projectData])
+        .select();
+
+      if (!error && data) {
+        setApps([data[0] as AppData, ...apps]);
+      } else {
+         console.error('Error adding project:', error);
+      }
+    }
+  };
+
+  const handleDeleteProject = async (id: string) => {
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      setApps(apps.filter(app => app.id !== id));
+    } else {
+       console.error('Error deleting project:', error);
+    }
+  };
+
+  const categories = useMemo(() => {
+    const cats = new Set(apps.map(app => app.category));
+    return ['all', ...Array.from(cats)];
+  }, [apps]);
+
   const filteredApps = useMemo(() => {
-    return applications
+    return apps
       .filter(app => {
-        const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            app.description.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = (app.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            (app.description || '').toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = categoryFilter === 'all' || app.category === categoryFilter;
         const matchesDemo = demoFilter === 'all' || 
                           (demoFilter === 'with-demo' && app.demoUrl) || 
@@ -109,7 +175,15 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="hidden sm:flex items-center gap-2"
+                onClick={() => {
+                  setEditingProject(undefined);
+                  setIsDialogOpen(true);
+                }}
+              >
                 <Plus className="w-4 h-4" />
                 New App
               </Button>
@@ -208,9 +282,24 @@ export default function App() {
               : "flex flex-col gap-4"
             }
           >
-            {filteredApps.length > 0 ? (
+            {isLoading ? (
+              <div className="col-span-full py-20 text-center flex flex-col items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-4"></div>
+                <h3 className="text-lg font-semibold">Loading projects...</h3>
+                <p className="text-muted-foreground mt-2">Connecting to Supabase Database</p>
+              </div>
+            ) : filteredApps.length > 0 ? (
               filteredApps.map((app) => (
-                <AppCard key={app.id} app={app} viewMode={viewMode} />
+                <AppCard 
+                  key={app.id} 
+                  app={app} 
+                  viewMode={viewMode}
+                  onEdit={() => {
+                    setEditingProject(app);
+                    setIsDialogOpen(true);
+                  }}
+                  onDelete={() => handleDeleteProject(app.id)}
+                />
               ))
             ) : (
               <div className="col-span-full py-20 text-center">
@@ -265,6 +354,13 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      <ProjectDialog 
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSave={handleSaveProject}
+        initialData={editingProject}
+      />
     </div>
   );
 }
@@ -273,9 +369,11 @@ interface AppCardProps {
   app: AppData;
   viewMode: 'grid' | 'list';
   key?: string | number;
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
-function AppCard({ app, viewMode }: AppCardProps) {
+function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
   const Icon = iconMap[app.icon] || LayoutGrid;
 
   if (viewMode === 'list') {
@@ -298,6 +396,11 @@ function AppCard({ app, viewMode }: AppCardProps) {
               )}
             </div>
             <p className="text-sm text-muted-foreground line-clamp-1">{app.description}</p>
+            {app.lead && (
+              <div className="flex items-center text-xs text-muted-foreground mt-1">
+                <Users className="w-3.5 h-3.5 mr-1" /> Lead: {app.lead}
+              </div>
+            )}
           </div>
             <div className="flex items-center gap-2">
             {app.demoUrl && (
@@ -320,9 +423,8 @@ function AppCard({ app, viewMode }: AppCardProps) {
                 <DropdownMenuGroup>
                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>View Details</DropdownMenuItem>
-                  <DropdownMenuItem>Share App</DropdownMenuItem>
-                  <DropdownMenuItem variant="destructive">Report Issue</DropdownMenuItem>
+                  <DropdownMenuItem onClick={onEdit}>Edit Project</DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" onClick={onDelete}>Delete Project</DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -348,6 +450,17 @@ function AppCard({ app, viewMode }: AppCardProps) {
                 {app.status}
               </Badge>
             )}
+            <div className="mt-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="h-6 w-6" />}>
+                  <MoreVertical className="w-4 h-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={onEdit}>Edit Project</DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" onClick={onDelete}>Delete Project</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
         <CardTitle className="text-xl group-hover:text-primary transition-colors">{app.name}</CardTitle>
@@ -357,6 +470,12 @@ function AppCard({ app, viewMode }: AppCardProps) {
       </CardHeader>
       <CardContent className="flex-1 pb-4">
         <div className="flex flex-col gap-3">
+          {app.lead && (
+            <div className="flex items-center text-xs text-muted-foreground">
+              <Users className="w-3.5 h-3.5 mr-2 opacity-70" />
+              Lead: <span className="font-medium ml-1 text-foreground">{app.lead}</span>
+            </div>
+          )}
           <div className="flex items-center text-xs text-muted-foreground">
             <Calendar className="w-3.5 h-3.5 mr-2 opacity-70" />
             Updated {new Date(app.lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

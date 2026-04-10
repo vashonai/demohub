@@ -1,8 +1,11 @@
+import rawProjects from './projects.json';
+
 export interface AppData {
   id: string;
   name: string;
   description: string;
   category: string;
+  lead?: string;
   demoUrl?: string;
   docsUrl?: string;
   lastUpdated: string;
@@ -10,7 +13,7 @@ export interface AppData {
   icon: string;
 }
 
-export const applications: AppData[] = [
+const mockApps: AppData[] = [
   {
     id: '1',
     name: 'Customer Portal',
@@ -95,3 +98,18 @@ export const applications: AppData[] = [
     icon: 'Wallet',
   }
 ];
+
+const internalProjects: AppData[] = rawProjects.map((p, index) => ({
+  id: `proj-${p.id}`,
+  name: p.name,
+  description: p.description,
+  category: 'Internal Project',
+  lead: p.lead,
+  demoUrl: p.demoUrl || undefined,
+  docsUrl: p.docUrl || undefined,
+  lastUpdated: new Date().toISOString().split('T')[0],
+  status: 'active',
+  icon: 'Briefcase'
+}));
+
+export const applications: AppData[] = [...mockApps, ...internalProjects];

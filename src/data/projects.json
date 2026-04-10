@@ -1,0 +1,482 @@
+[
+  {
+    "id": "1",
+    "name": "Intellibus Platform",
+    "description": "",
+    "lead": "Andre Boothe",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "2",
+    "name": "WDG.org CXC GQ",
+    "description": "MOU with CXC and follow up to drive GQ across 21 nations",
+    "lead": "Anwin Mbah",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "3",
+    "name": "MoUs",
+    "description": "Finding and creating MOU with ideal Intellibus partners and schools",
+    "lead": "Anwin Mbah",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "4",
+    "name": "AI Lab",
+    "description": "AI Lab is a school-based model that combines infrastructure, curriculum, and people to build practical AI skills and community-focused solutions. Each lab includes reliable connectivity, interactive touch devices, and a local AI inferencing cluster, enabling students to learn and apply AI even with limited internet access. Students progress through structured skill levels and real-world projects aligned to local needs, supported by trained staff and student ambassadors, making the model scalable and impact-driven.",
+    "lead": "Anwin Mbah",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "5",
+    "name": "Youth Pipeline Activaiton",
+    "description": "3 Hackathons across all schools + 3 AI Labs with 1 full operational, youth mapped (ages 1–25), and first learning + dorm model operational + National and International Study Trips (for Learning and exposure e.g. Tour Operators Mobay)",
+    "lead": "Anwin Mbah",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "6",
+    "name": "Academy Website",
+    "description": "",
+    "lead": "Camile Gayle",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "7",
+    "name": "Census",
+    "description": "Deep Data Collection of People (Age, Skills, Health, Job), Infra (Roads, Water, Broadband, Electricy, Sanitation), Economic (Businesses Revenue, Health, Loans)",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "8",
+    "name": "AI Academy",
+    "description": "Physical Space for 1000 people training and jobs (managed by Intellibus)",
+    "lead": "Camile Gayle",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "9",
+    "name": "Down Town Development",
+    "description": "The Downtown Development Project focuses on transforming selected downtown parcels into a modern mixed use destination. The development will include a public park, corporate office spaces, an event hall, commercial retail spaces, and a boardwalk area. The goal is to create an economic and community hub that attracts businesses, residents, and visitors while generating long term revenue.",
+    "lead": "Camile Gayle",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "10",
+    "name": "Digital Jamaica Dashboard",
+    "description": "",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "11",
+    "name": "Farmers Organized + Income Flowing",
+    "description": "500 farmers formally organized (by community), a functioning aggregation & sales mechanism, & first recurring buyers & Loan Program Fleshed out.",
+    "lead": "Daniel Callaghan",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "12",
+    "name": "NMDT.org",
+    "description": "Trust Development Plan for North Manchester economic transformation across sectors, and including Solar City and AI Academy site development and: ",
+    "lead": "Daniel Callaghan",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "13",
+    "name": "Small Businesses and Tradesmen Group Activated and Funded",
+    "description": "Identified and Organized Small Businesses and Funded via a Funding Partner",
+    "lead": "Daniel Callaghan",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "14",
+    "name": "Manchester Residential Area",
+    "description": "The Manchester Residential Area Project focuses on building housing and operational support facilities for Intellibus team members working in Manchester. The development will include a main executive residence and additional housing units for project staff. The location also provides a strategic overlook of surrounding development lands, supporting long term expansion planning.",
+    "lead": "Daniel Callaghan",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "15",
+    "name": "Nirvana Park",
+    "description": "Nirvana Park is a premium wellness and recreation park designed to deliver a luxury outdoor experience unlike any existing park in Jamaica. The park will feature high end finishes, event spaces, monuments, and themed wellness attractions. The project aims to create a monetized destination that attracts both local and international visitors while funding future park expansions.\n",
+    "lead": "Daniel Callaghan",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "16",
+    "name": "Land Mapping",
+    "description": "The Land Mapping Application Project focuses on building an advanced mapping system that uses satellite imagery, AI tools, and property ownership data to support development planning. The application will help identify land ownership, support land canvassing, and improve infrastructure and development decisions. The system will support projects across Manchester, Kingston, and other future expansion areas.",
+    "lead": "Daniel Callaghan",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "17",
+    "name": "AI Academy Curriculum",
+    "description": "Standardize and operationalize the Intellibus AI Academy curriculum into a repeatable training system that produces deployment-ready squads, tracks readiness via GQ diagnostics/retests, and preserves institutional and client knowledge in a single source of truth.",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "18",
+    "name": "AIMC Online Course",
+    "description": "",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "19",
+    "name": "Whatsapp Ask Atlas",
+    "description": "",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "20",
+    "name": "Constituency Platform / Backend",
+    "description": "",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "21",
+    "name": "GQ Platform",
+    "description": "All GQs administered + what's needed for REDI & other Programmes ",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "22",
+    "name": "Internal Warehousing Solution",
+    "description": "",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "23",
+    "name": "Invoice System",
+    "description": "",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "24",
+    "name": "Whatsapp Ask Atlas",
+    "description": "",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "25",
+    "name": "Agency and Ministry Automation",
+    "description": "Automation of Backends for all Agencies and Ministries that receive paper today from the Constituency Office to switch to digital intake and digital response.",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "26",
+    "name": "Broadband Network",
+    "description": "Implementation (IFC pathway)",
+    "lead": "TBC",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "27",
+    "name": "Database Creation",
+    "description": "",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "28",
+    "name": "NARRA & Funding",
+    "description": "Review of NARRA and Funding Sources to determine how funds are used for long term Resilience — SWF (Sovereign Wealth Fund)",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "29",
+    "name": "REDI Program",
+    "description": "Rural Economic Development Initiative to culturaly and economically integrated 10,000 people across 100 communties in North East Manchester",
+    "lead": "Daniel Callaghan",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "30",
+    "name": "Research Reports",
+    "description": "Build a high-frequency, premium research publishing engine that produces well-designed, thorough white-paper style reports tailored to specific customers (targeting ~1 publishable report per day/week, not news).",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "31",
+    "name": "Grants Portal",
+    "description": "Operating platform for identifying focused grants/donors and managing end-to-end distributed funding",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "32",
+    "name": "SPEED Initiative",
+    "description": "Transform Experience in MDAs (Ministries, Departments and Agencies)\n— Investor Services — Whiteglove Experience for Qualified Investors (including Research, Land Leasing or Acquisition, Incorporation, Taxation and Banking)\n— Citizen Services — Whiteglove Experience for Citizens (One ID, Tax, Motor Vehicles, Passport, Work Permits, etc)",
+    "lead": "Christopher Reckord",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "33",
+    "name": "WDG Grants Sourcing",
+    "description": "Focused grants and donors for selected WDG projects in Jamaica and the Caricom",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "34",
+    "name": "WDG Tv",
+    "description": "Media backbone of the WDG ecosystem — uniting policy, technology, and people through storytelling and live engagement",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "35",
+    "name": "Intellibus Care Coordination",
+    "description": "Set up of US not-for-profit vehicle for grant and donor funding",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "36",
+    "name": "Intellibus Care Telemedicine",
+    "description": "A secure, web-based telehealth and electronic medical records (EMR) application designed for doctors serving patients in Jamaica’s underserved and storm-affected communities",
+    "lead": "Daniel Callaghan",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "37",
+    "name": "Intellibus Care Website",
+    "description": "Website to engage citizens in telehealth initiative drive improved NCD outcomes",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "38",
+    "name": "Solar City",
+    "description": "Creation of digital city in Jamaica as regional digital hub of the future housing AI Academy, student, staff and associated commercial and community faciulities, as well as other landmark enterprises (e.g. healthcare, pharma, tech",
+    "lead": "Daniel Callaghan",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "39",
+    "name": "ISDJ Digital Twin",
+    "description": "",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "40",
+    "name": "WDG Outreach",
+    "description": "Plan for focused engagement with key organisations, NGOs and governments to align with WDG principles of personal and national data sovereigny, creation of unified country and regional data, and promotion of scaled digital infrastructure development ",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "41",
+    "name": "WDG Website",
+    "description": "The WDG website is the official digital home of World Digital Governance, designed to clearly present its policy frameworks, standards library, and ethical AI model in a structured, accessible format.\n\nIt acts as the public gateway for governments, partners, and stakeholders to understand, adopt, and collaborate around the PROSE-based digital governance framework.",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "42",
+    "name": "WDG Ontology",
+    "description": "A harmonised digital ontology to enhance unification and interoperability across the Caricom — to Model & Reflect the Reality of Information in  the Digital / Physical World as accurately as possible\n",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "43",
+    "name": "WDG Policy",
+    "description": "Ongoing development of WDG principles and policy through collaboration in the core and extended WDG policy working group",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "44",
+    "name": "World Bank Digitalisation Project",
+    "description": "Automation roadmap defined & initial pilot automations underway.\n— Broadband, Financial Inclusion (digital wallet) etc",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "45",
+    "name": "China procurement",
+    "description": "Sourcing and purchasing from China",
+    "lead": "Anwin Mbah",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "46",
+    "name": "WDG Client Certification",
+    "description": "Certify Caribbean software companies' new platforms and products",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "47",
+    "name": "WDG CDCC",
+    "description": "Establishment of  the Caricom Caribbean Digital Coordination Commission (extension of the Caricom's proposed Caribbean Digital Safety Commission) as the oversight body of WDG digital principles across the region",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "48",
+    "name": "WDG CHOGM Participation",
+    "description": "Full WDG participation in CHOGM main Meeting events as well as side meetings such as Youth, Jobs, Women, Business and Digital sessions. Key objective to have Ed Watal speak in keynote addresses, increase awareness of WDG objectives among CHOGM nations, and connect with key potential funding organisations",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "49",
+    "name": "WDG Caricom Treaty",
+    "description": "Signing of Digital Job Creation Treaty between Caricom, CTU and Intellibus to bring WDG into being as a Treaty Organisation",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "50",
+    "name": "USE White Paper Project",
+    "description": "Transform the draft USE/HIS White Paper and engage a core research team in refining, critiquing and redrafting the paper into a format that can be the basis of a compelling case for a new investable asset form to improve the credit rating of developiong nations based on the implicit future value of an educated workforce.",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "51",
+    "name": "TJB Digital Strategy",
+    "description": "",
+    "lead": "Dennis Wilmot",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "52",
+    "name": "CXC GQ Certification",
+    "description": "",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "53",
+    "name": "UWI/SUNY/WDG Healthcare Resilience Digitalisation",
+    "description": "",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "54",
+    "name": "WDG UWI Nigeria Universities collaboration",
+    "description": "",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "55",
+    "name": "WDG Core Working Group Caricom Policy Template",
+    "description": "",
+    "lead": "",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "56",
+    "name": "WDG Summit",
+    "description": "Bring together like minded people and organisations to devise strategies for enacting global data sovereignty for individuals and nations, promoting ownership, security and transparency",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "57",
+    "name": "WDG Investment Working Group",
+    "description": "Working group to attrract investment supporting the objectives of the WDG, focused on membership of the  IDB Invest",
+    "lead": "Graeme Thomson",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "58",
+    "name": "WDG GQ and Jobs",
+    "description": "",
+    "lead": "",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "59",
+    "name": "WDG Standards Working Group",
+    "description": "",
+    "lead": "",
+    "demoUrl": "",
+    "docUrl": ""
+  },
+  {
+    "id": "60",
+    "name": "WDG Vision Postings for YT",
+    "description": "",
+    "lead": "",
+    "demoUrl": "",
+    "docUrl": ""
+  }
+]
