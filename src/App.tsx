@@ -158,7 +158,7 @@ export default function App() {
           return new Date(b.lastUpdated || Date.now()).getTime() - new Date(a.lastUpdated || Date.now()).getTime();
         }
       });
-  }, [searchQuery, categoryFilter, demoFilter, sortBy]);
+  }, [searchQuery, categoryFilter, demoFilter, sortBy, apps]);
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
