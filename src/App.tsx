@@ -501,42 +501,16 @@ export default function App() {
         )}
       </main>
 
-      <footer className="border-t mt-20 py-12 bg-muted/30">
+      <footer className="border-t mt-20 py-8 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="flex items-center gap-3">
-              <div className="brand-gradient p-1.5 rounded-lg shadow-sm">
-                <LayoutGrid className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold brand-gradient-text">INTELLIBUS</span>
-              <span className="text-muted-foreground text-sm ml-2">
-                © 2026 Intellibus
-              </span>
+          <div className="flex items-center justify-center gap-3">
+            <div className="brand-gradient p-1.5 rounded-lg shadow-sm">
+              <LayoutGrid className="w-4 h-4 text-white" />
             </div>
-
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">
-                Documentation
-              </a>
-              <a href="#" className="hover:text-foreground transition-colors">
-                Support
-              </a>
-              <a href="#" className="hover:text-foreground transition-colors">
-                Privacy Policy
-              </a>
-              <a href="#" className="hover:text-foreground transition-colors">
-                Terms of Service
-              </a>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Github className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Globe className="w-5 h-5" />
-              </Button>
-            </div>
+            <span className="font-bold brand-gradient-text">INTELLIBUS</span>
+            <span className="text-muted-foreground text-sm ml-2">
+              © 2026 Intellibus
+            </span>
           </div>
         </div>
       </footer>
@@ -636,7 +610,7 @@ function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold truncate group-hover:text-[var(--brand-mid)] transition-colors">
+              <h3 className="font-semibold group-hover:text-[var(--brand-mid)] transition-colors">
                 {app.name}
               </h3>
               <Badge
@@ -759,7 +733,7 @@ function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
           >
             <Icon className="w-3.5 h-3.5 text-white" />
           </div>
-          <CardTitle className="text-base group-hover:text-[var(--brand-mid)] transition-colors truncate">
+          <CardTitle className="text-base group-hover:text-[var(--brand-mid)] transition-colors break-words">
             {app.name}
           </CardTitle>
         </div>
@@ -807,16 +781,16 @@ function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
       {/* Bottom bar: link indicator + docs button */}
       {(linkUrl || app.docsUrl) && (
         <div className="px-4 pb-3 pt-0">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             {linkUrl && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-[var(--brand-mid)] transition-colors">
-                <ExternalLink className="w-3 h-3" />
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-[var(--brand-mid)] transition-colors min-w-0 overflow-hidden">
+                <ExternalLink className="w-3 h-3 shrink-0" />
                 <span className="truncate opacity-70">{new URL(linkUrl).hostname}</span>
               </div>
             )}
             {app.docsUrl && (
               <button
-                className="docs-btn inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[var(--brand-mid)] transition-colors ml-auto"
+                className="docs-btn inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[var(--brand-mid)] transition-colors shrink-0 ml-auto"
                 onClick={handleDocsClick}
                 title="View Documentation"
               >
