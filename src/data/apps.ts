@@ -11,6 +11,8 @@ export interface AppData {
   lastUpdated: string;
   status: 'active' | 'beta' | 'deprecated';
   icon: string;
+  deleted_at?: string | null;
+  archived_at?: string | null;
 }
 
 const mockApps: AppData[] = [
