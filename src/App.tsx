@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Search,
@@ -20,6 +20,11 @@ import {
   FileText,
   Wallet,
   MoreVertical,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Filter,
 } from "lucide-react";
 
 import { AppData } from "./data/apps";
@@ -31,12 +36,10 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,12 +69,35 @@ const iconMap: Record<string, any> = {
   Wallet,
 };
 
+const PAGE_SIZE = 12;
+
+// ─── Gradient palette for cards without iframe previews ───
+const cardGradients = [
+  "linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)",
+  "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+  "linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)",
+  "linear-gradient(135deg, #14b8a6 0%, #0ea5e9 100%)",
+  "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)",
+  "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+  "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+  "linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)",
+];
+
+function getGradientForId(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return cardGradients[Math.abs(hash) % cardGradients.length];
+}
+
 export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [demoFilter, setDemoFilter] = useState("all");
+  const [showAll, setShowAll] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "date">("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [apps, setApps] = useState<AppData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -149,7 +175,7 @@ export default function App() {
 
   const categories = useMemo(() => {
     const cats = new Set(apps.map((app) => app.category));
-    return ["all", ...Array.from(cats)];
+    return ["all", ...Array.from(cats).sort()];
   }, [apps]);
 
   const filteredApps = useMemo(() => {
@@ -162,11 +188,10 @@ export default function App() {
             .includes(searchQuery.toLowerCase());
         const matchesCategory =
           categoryFilter === "all" || app.category === categoryFilter;
-        const matchesDemo =
-          demoFilter === "all" ||
-          (demoFilter === "with-demo" && app.demoUrl) ||
-          (demoFilter === "no-demo" && !app.demoUrl);
-        return matchesSearch && matchesCategory && matchesDemo;
+        // Default: only show projects with at least one link
+        const hasLink = app.demoUrl || app.docsUrl;
+        const matchesLinkFilter = showAll || hasLink;
+        return matchesSearch && matchesCategory && matchesLinkFilter;
       })
       .sort((a, b) => {
         if (sortBy === "name") {
@@ -178,7 +203,25 @@ export default function App() {
           );
         }
       });
-  }, [searchQuery, categoryFilter, demoFilter, sortBy, apps]);
+  }, [searchQuery, categoryFilter, showAll, sortBy, apps]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter, showAll, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredApps.length / PAGE_SIZE));
+  const paginatedApps = filteredApps.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  const goToPage = useCallback(
+    (page: number) => {
+      setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+    },
+    [totalPages],
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
@@ -186,22 +229,17 @@ export default function App() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
-                <LayoutGrid className="w-6 h-6" />
+            <div className="flex items-center gap-3">
+              <div className="brand-gradient p-2 rounded-xl shadow-md">
+                <LayoutGrid className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-xl font-bold tracking-tight">Demo Hub</h1>
-            </div>
-
-            <div className="hidden md:flex items-center gap-4 flex-1 max-w-md mx-8">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search applications..."
-                  className="pl-10 w-full bg-muted/50 border-none focus-visible:ring-1"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+              <div className="flex flex-col">
+                <h1 className="text-lg font-bold tracking-tight leading-tight brand-gradient-text">
+                  INTELLIBUS
+                </h1>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest leading-none">
+                  Demo Hub
+                </span>
               </div>
             </div>
 
@@ -218,8 +256,8 @@ export default function App() {
                 <Plus className="w-4 h-4" />
                 New App
               </Button>
-              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-medium border">
-                VA
+              <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-xs font-bold text-white shadow-md">
+                IB
               </div>
             </div>
           </div>
@@ -228,7 +266,7 @@ export default function App() {
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
-        <div className="mb-12">
+        <div className="mb-10">
           <h2 className="text-3xl font-bold tracking-tight mb-2">
             Internal Application Hub
           </h2>
@@ -246,80 +284,110 @@ export default function App() {
           </div>
         )}
 
-        {/* Controls */}
-        <div className="flex flex-col gap-6 mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
-              <Tabs
-                value={demoFilter}
-                onValueChange={setDemoFilter}
-                className="w-auto"
-              >
-                <TabsList className="bg-muted/50">
-                  <TabsTrigger value="all">All Apps</TabsTrigger>
-                  <TabsTrigger value="with-demo">With Demo</TabsTrigger>
-                  <TabsTrigger value="no-demo">No Demo</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-                <SelectTrigger className="w-[160px] bg-muted/50 border-none">
-                  <ArrowUpDown className="w-3.5 h-3.5 mr-2 opacity-50" />
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Name (A-Z)</SelectItem>
-                  <SelectItem value="date">Recently Updated</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Separator orientation="vertical" className="h-8 mx-1" />
-
-              <div className="flex items-center bg-muted/50 rounded-lg p-1">
-                <Button
-                  variant={viewMode === "grid" ? "secondary" : "ghost"}
-                  size="icon"
-                  className="w-8 h-8"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
-                  size="icon"
-                  className="w-8 h-8"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+        {/* ─── Controls Bar: Search (left) | Filters (right) ─── */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-8">
+          {/* Search — left */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              id="search-input"
+              placeholder="Search projects..."
+              className="pl-10 w-full bg-muted/50 border-none focus-visible:ring-1"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground mr-2">
-              Categories:
-            </span>
-            {categories.map((cat) => (
+          {/* Filters — right */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Category dropdown */}
+            <Select
+              value={categoryFilter}
+              onValueChange={(v: any) => setCategoryFilter(v)}
+            >
+              <SelectTrigger className="w-[160px] bg-muted/50 border-none">
+                <Filter className="w-3.5 h-3.5 mr-2 opacity-50" />
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    <span className="capitalize">{cat === "all" ? "All Categories" : cat}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Sort dropdown */}
+            <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+              <SelectTrigger className="w-[160px] bg-muted/50 border-none">
+                <ArrowUpDown className="w-3.5 h-3.5 mr-2 opacity-50" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name (A-Z)</SelectItem>
+                <SelectItem value="date">Recently Updated</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Separator orientation="vertical" className="h-8 mx-1 hidden sm:block" />
+
+            {/* Show All toggle */}
+            <Button
+              variant={showAll ? "secondary" : "outline"}
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setShowAll(!showAll)}
+              title={showAll ? "Showing all projects" : "Showing only projects with links"}
+            >
+              {showAll ? (
+                <Eye className="w-3.5 h-3.5" />
+              ) : (
+                <EyeOff className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">{showAll ? "All" : "With Links"}</span>
+            </Button>
+
+            <Separator orientation="vertical" className="h-8 mx-1 hidden sm:block" />
+
+            {/* View mode toggle */}
+            <div className="flex items-center bg-muted/50 rounded-lg p-1">
               <Button
-                key={cat}
-                variant={categoryFilter === cat ? "default" : "outline"}
-                size="sm"
-                className="rounded-full h-8 px-4 capitalize"
-                onClick={() => setCategoryFilter(cat)}
+                variant={viewMode === "grid" ? "secondary" : "ghost"}
+                size="icon"
+                className="w-8 h-8"
+                onClick={() => setViewMode("grid")}
               >
-                {cat}
+                <LayoutGrid className="w-4 h-4" />
               </Button>
-            ))}
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="icon"
+                className="w-8 h-8"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
+        </div>
+
+        {/* Results count */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-muted-foreground">
+            {filteredApps.length} project{filteredApps.length !== 1 ? "s" : ""} found
+            {!showAll && (
+              <span className="ml-1 opacity-70">
+                · showing projects with links only
+              </span>
+            )}
+          </p>
         </div>
 
         {/* Grid/List View */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={`${viewMode}-${categoryFilter}-${demoFilter}-${sortBy}-${searchQuery}`}
+            key={`${viewMode}-${categoryFilter}-${showAll}-${sortBy}-${searchQuery}-${currentPage}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -338,8 +406,8 @@ export default function App() {
                   Connecting to Supabase Database
                 </p>
               </div>
-            ) : filteredApps.length > 0 ? (
-              filteredApps.map((app) => (
+            ) : paginatedApps.length > 0 ? (
+              paginatedApps.map((app) => (
                 <AppCard
                   key={app.id}
                   app={app}
@@ -366,7 +434,7 @@ export default function App() {
                   onClick={() => {
                     setSearchQuery("");
                     setCategoryFilter("all");
-                    setDemoFilter("all");
+                    setShowAll(true);
                   }}
                   className="mt-2"
                 >
@@ -376,44 +444,73 @@ export default function App() {
             )}
           </motion.div>
         </AnimatePresence>
+
+        {/* ─── Pagination ─── */}
+        {!isLoading && filteredApps.length > PAGE_SIZE && (
+          <div className="flex items-center justify-center gap-2 mt-10">
+            <button
+              className="pagination-btn"
+              disabled={currentPage <= 1}
+              onClick={() => goToPage(currentPage - 1)}
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+              // Show max 7 page buttons with ellipsis
+              if (
+                totalPages <= 7 ||
+                page === 1 ||
+                page === totalPages ||
+                Math.abs(page - currentPage) <= 1
+              ) {
+                return (
+                  <button
+                    key={page}
+                    className={`pagination-btn ${page === currentPage ? "pagination-btn-active" : ""}`}
+                    onClick={() => goToPage(page)}
+                    aria-label={`Page ${page}`}
+                    aria-current={page === currentPage ? "page" : undefined}
+                  >
+                    {page}
+                  </button>
+                );
+              } else if (
+                page === currentPage - 2 ||
+                page === currentPage + 2
+              ) {
+                return (
+                  <span key={page} className="px-1 text-muted-foreground text-sm">
+                    …
+                  </span>
+                );
+              }
+              return null;
+            })}
+
+            <button
+              className="pagination-btn"
+              disabled={currentPage >= totalPages}
+              onClick={() => goToPage(currentPage + 1)}
+              aria-label="Next page"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </main>
 
-      <footer className="border-t mt-20 py-12 bg-muted/30">
+      <footer className="border-t mt-20 py-8 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="flex items-center gap-2">
-              <div className="bg-primary text-primary-foreground p-1 rounded">
-                <LayoutGrid className="w-4 h-4" />
-              </div>
-              <span className="font-bold">Demo Hub</span>
-              <span className="text-muted-foreground text-sm ml-2">
-                © 2026 Internal Tools Team
-              </span>
+          <div className="flex items-center justify-center gap-3">
+            <div className="brand-gradient p-1.5 rounded-lg shadow-sm">
+              <LayoutGrid className="w-4 h-4 text-white" />
             </div>
-
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-foreground transition-colors">
-                Documentation
-              </a>
-              <a href="#" className="hover:text-foreground transition-colors">
-                Support
-              </a>
-              <a href="#" className="hover:text-foreground transition-colors">
-                Privacy Policy
-              </a>
-              <a href="#" className="hover:text-foreground transition-colors">
-                Terms of Service
-              </a>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Github className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Globe className="w-5 h-5" />
-              </Button>
-            </div>
+            <span className="font-bold brand-gradient-text">INTELLIBUS</span>
+            <span className="text-muted-foreground text-sm ml-2">
+              © 2026 Intellibus
+            </span>
           </div>
         </div>
       </footer>
@@ -428,6 +525,42 @@ export default function App() {
   );
 }
 
+// ─── IframePreview component ───
+
+function IframePreview({ url, appId, icon }: { url?: string; appId: string; icon: string }) {
+  const [iframeFailed, setIframeFailed] = useState(false);
+  const Icon = iconMap[icon] || LayoutGrid;
+  const gradient = getGradientForId(appId);
+
+  if (!url || iframeFailed) {
+    return (
+      <div
+        className="iframe-preview-fallback"
+        style={{ background: gradient }}
+      >
+        <div className="absolute inset-0 bg-black/10" />
+        <Icon className="w-12 h-12 text-white/80 relative z-10" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="iframe-preview">
+      <iframe
+        src={url}
+        title="Preview"
+        sandbox="allow-scripts allow-same-origin"
+        loading="lazy"
+        onError={() => setIframeFailed(true)}
+      />
+      {/* Overlay to prevent interaction */}
+      <div className="absolute inset-0 z-[1]" />
+    </div>
+  );
+}
+
+// ─── App Card component ───
+
 interface AppCardProps {
   app: AppData;
   viewMode: "grid" | "list";
@@ -438,27 +571,58 @@ interface AppCardProps {
 
 function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
   const Icon = iconMap[app.icon] || LayoutGrid;
+  const linkUrl = app.demoUrl || app.docsUrl;
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on interactive elements
+    if ((e.target as HTMLElement).closest("[data-slot='dropdown-menu']") ||
+        (e.target as HTMLElement).closest("[data-slot='button']") ||
+        (e.target as HTMLElement).closest("a") ||
+        (e.target as HTMLElement).closest(".docs-btn")) {
+      return;
+    }
+    if (linkUrl) {
+      window.open(linkUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const handleDocsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (app.docsUrl) {
+      window.open(app.docsUrl, "_blank", "noopener,noreferrer");
+    }
+  };
 
   if (viewMode === "list") {
     return (
-      <Card className="hover:shadow-md transition-shadow group overflow-hidden border-muted/60">
-        <CardContent className="p-4 flex items-center gap-6">
-          <div className="bg-secondary p-3 rounded-xl group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-            <Icon className="w-6 h-6" />
+      <Card
+        className={`hover:shadow-md transition-shadow group overflow-hidden border-muted/60 card-hover-lift ${linkUrl ? "card-clickable" : ""}`}
+        onClick={handleCardClick}
+      >
+        <CardContent className="p-4 flex items-center gap-4">
+          {/* Small icon/gradient preview */}
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+            style={{ background: getGradientForId(app.id) }}
+          >
+            <Icon className="w-5 h-5 text-white" />
           </div>
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold truncate">{app.name}</h3>
+              <h3 className="font-semibold group-hover:text-[var(--brand-mid)] transition-colors">
+                {app.name}
+              </h3>
               <Badge
                 variant="secondary"
-                className="text-[10px] h-4 px-1.5 font-normal uppercase tracking-wider"
+                className="text-[10px] h-4 px-1.5 font-normal uppercase tracking-wider shrink-0"
               >
                 {app.category}
               </Badge>
               {app.status !== "active" && (
                 <Badge
                   variant={app.status === "beta" ? "outline" : "destructive"}
-                  className="text-[10px] h-4 px-1.5 font-normal uppercase tracking-wider"
+                  className="text-[10px] h-4 px-1.5 font-normal uppercase tracking-wider shrink-0"
                 >
                   {app.status}
                 </Badge>
@@ -467,46 +631,40 @@ function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
             <p className="text-sm text-muted-foreground line-clamp-1">
               {app.description}
             </p>
-            {app.lead && (
-              <div className="flex items-center text-xs text-muted-foreground mt-1">
-                <Users className="w-3.5 h-3.5 mr-1" /> Lead: {app.lead}
+            <div className="flex items-center gap-4 mt-1">
+              {app.lead && (
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <Users className="w-3.5 h-3.5 mr-1" /> {app.lead}
+                </div>
+              )}
+              <div className="flex items-center text-xs text-muted-foreground">
+                <Calendar className="w-3.5 h-3.5 mr-1" />
+                {new Date(app.lastUpdated).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
               </div>
-            )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {app.demoUrl && (
+
+          {/* Docs + link indicator + actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            {app.docsUrl && (
               <Button
                 variant="outline"
                 size="sm"
-                render={
-                  <a
-                    href={app.demoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                }
-                className="h-8"
+                className="docs-btn h-7 gap-1.5 text-xs"
+                onClick={handleDocsClick}
+                title="View Documentation"
               >
-                <ExternalLink className="w-3.5 h-3.5 mr-2" />
-                Demo
-              </Button>
-            )}
-            {app.docsUrl && (
-              <Button
-                variant="ghost"
-                size="sm"
-                render={
-                  <a
-                    href={app.docsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                }
-                className="h-8"
-              >
-                <BookOpen className="w-3.5 h-3.5 mr-2" />
+                <BookOpen className="w-3.5 h-3.5" />
                 Docs
               </Button>
+            )}
+            {linkUrl && (
+              <div className="text-muted-foreground">
+                <ExternalLink className="w-4 h-4" />
+              </div>
             )}
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -535,14 +693,58 @@ function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
     );
   }
 
+  // ─── Grid card ───
   return (
-    <Card className="flex flex-col h-full hover:shadow-lg transition-all duration-300 group border-muted/60 hover:border-primary/20">
-      <CardHeader className="pb-4">
-        <div className="flex justify-between items-start mb-4">
-          <div className="bg-secondary p-3 rounded-2xl group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 transform group-hover:scale-110">
-            <Icon className="w-6 h-6" />
+    <Card
+      className={`flex flex-col h-full transition-all duration-300 group border-muted/60 hover:border-primary/20 card-hover-lift overflow-hidden ${linkUrl ? "card-clickable" : ""}`}
+      onClick={handleCardClick}
+    >
+      {/* Iframe preview / gradient fallback */}
+      <IframePreview url={app.demoUrl} appId={app.id} icon={app.icon} />
+
+      {/* Card actions overlay */}
+      <div className="card-actions-overlay">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-7 w-7 rounded-full shadow-md bg-background/90 backdrop-blur"
+              />
+            }
+          >
+            <MoreVertical className="w-3.5 h-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEdit}>Edit Project</DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={onDelete}>
+              Delete Project
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex items-center gap-2 mb-1">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: getGradientForId(app.id) }}
+          >
+            <Icon className="w-3.5 h-3.5 text-white" />
           </div>
-          <div className="flex flex-col items-end gap-1.5">
+          <CardTitle className="text-base group-hover:text-[var(--brand-mid)] transition-colors break-words">
+            {app.name}
+          </CardTitle>
+        </div>
+        <CardDescription className="line-clamp-2 min-h-[40px]">
+          {app.description}
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="flex-1 pb-4">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center flex-wrap gap-1.5">
             <Badge
               variant="secondary"
               className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0"
@@ -557,94 +759,48 @@ function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
                 {app.status}
               </Badge>
             )}
-            <div className="mt-1">
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button variant="ghost" size="icon" className="h-6 w-6" />
-                  }
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={onEdit}>
-                    Edit Project
-                  </DropdownMenuItem>
-                  <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                    Delete Project
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
           </div>
-        </div>
-        <CardTitle className="text-xl group-hover:text-primary transition-colors">
-          {app.name}
-        </CardTitle>
-        <CardDescription className="line-clamp-2 min-h-[40px] mt-2">
-          {app.description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1 pb-4">
-        <div className="flex flex-col gap-3">
-          {app.lead && (
-            <div className="flex items-center text-xs text-muted-foreground">
-              <Users className="w-3.5 h-3.5 mr-2 opacity-70" />
-              Lead:{" "}
-              <span className="font-medium ml-1 text-foreground">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+            {app.lead && (
+              <div className="flex items-center">
+                <Users className="w-3 h-3 mr-1 opacity-70" />
                 {app.lead}
-              </span>
+              </div>
+            )}
+            <div className="flex items-center">
+              <Calendar className="w-3 h-3 mr-1 opacity-70" />
+              {new Date(app.lastUpdated).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
             </div>
-          )}
-          <div className="flex items-center text-xs text-muted-foreground">
-            <Calendar className="w-3.5 h-3.5 mr-2 opacity-70" />
-            Updated{" "}
-            {new Date(app.lastUpdated).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
           </div>
         </div>
       </CardContent>
-      <Separator className="mx-6 w-auto opacity-50" />
-      <CardFooter className="pt-4 gap-2">
-        {app.demoUrl ? (
-          <Button
-            variant="default"
-            size="sm"
-            className="flex-1 shadow-sm"
-            render={
-              <a href={app.demoUrl} target="_blank" rel="noopener noreferrer" />
-            }
-          >
-            <ExternalLink className="w-3.5 h-3.5 mr-2" />
-            View Demo
-          </Button>
-        ) : (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="flex-1 opacity-50 cursor-not-allowed"
-            disabled
-          >
-            No Demo
-          </Button>
-        )}
-        {app.docsUrl && (
-          <Button
-            variant="outline"
-            size="icon"
-            className="shrink-0"
-            render={
-              <a href={app.docsUrl} target="_blank" rel="noopener noreferrer" />
-            }
-            title="Documentation"
-          >
-            <BookOpen className="w-4 h-4" />
-          </Button>
-        )}
-      </CardFooter>
+
+      {/* Bottom bar: link indicator + docs button */}
+      {(linkUrl || app.docsUrl) && (
+        <div className="px-4 pb-3 pt-0">
+          <div className="flex items-center justify-between gap-2">
+            {linkUrl && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-[var(--brand-mid)] transition-colors min-w-0 overflow-hidden">
+                <ExternalLink className="w-3 h-3 shrink-0" />
+                <span className="truncate opacity-70">{new URL(linkUrl).hostname}</span>
+              </div>
+            )}
+            {app.docsUrl && (
+              <button
+                className="docs-btn inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[var(--brand-mid)] transition-colors shrink-0 ml-auto"
+                onClick={handleDocsClick}
+                title="View Documentation"
+              >
+                <BookOpen className="w-3 h-3" />
+                <span>Docs</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
