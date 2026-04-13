@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Search,
@@ -30,8 +30,10 @@ import {
   Archive,
 } from "lucide-react";
 
+import { authClient } from "./lib/auth-client";
 import { AppData } from "./data/apps";
 import { supabase } from "./lib/supabase";
+import SignIn from "./components/sign-in";
 import { ProjectDialog } from "@/src/components/ProjectDialog";
 import { DeleteConfirmDialog } from "@/src/components/DeleteConfirmDialog";
 import { ArchiveConfirmDialog } from "@/src/components/ArchiveConfirmDialog";
@@ -97,6 +99,8 @@ function getGradientForId(id: string): string {
 }
 
 export default function App() {
+  const { data: session, isPending: isAuthPending } = authClient.useSession();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showAll, setShowAll] = useState(false);
@@ -392,6 +396,23 @@ export default function App() {
     [totalPages],
   );
 
+  if (isAuthPending) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+        <p className="text-muted-foreground">Loading session...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <SignIn />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
       {/* Header */}
@@ -459,9 +480,12 @@ export default function App() {
                   </span>
                 )}
               </Button>
-              <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-xs font-bold text-white shadow-md">
-                IB
+              <div title={session?.user?.email} className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-xs font-bold text-white shadow-md border overflow-hidden">
+                {session?.user?.image ? <img src={session.user.image} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover bg-background"/> : session?.user?.name?.charAt(0)?.toUpperCase() || "U"}
               </div>
+              <Button variant="ghost" size="sm" onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => window.location.reload() } })}>
+                Sign Out
+              </Button>
             </div>
           </div>
         </div>
