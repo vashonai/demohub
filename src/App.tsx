@@ -22,8 +22,10 @@ import {
   MoreVertical,
 } from "lucide-react";
 
+import { authClient } from "./lib/auth-client";
 import { AppData } from "./data/apps";
 import { supabase } from "./lib/supabase";
+import SignIn from "./components/sign-in";
 import { ProjectDialog } from "@/src/components/ProjectDialog";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -67,6 +69,8 @@ const iconMap: Record<string, any> = {
 };
 
 export default function App() {
+  const { data: session, isPending: isAuthPending } = authClient.useSession();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [demoFilter, setDemoFilter] = useState("all");
@@ -180,6 +184,23 @@ export default function App() {
       });
   }, [searchQuery, categoryFilter, demoFilter, sortBy, apps]);
 
+  if (isAuthPending) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+        <p className="text-muted-foreground">Loading session...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <SignIn />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
       {/* Header */}
@@ -218,9 +239,12 @@ export default function App() {
                 <Plus className="w-4 h-4" />
                 New App
               </Button>
-              <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-medium border">
-                VA
+              <div title={session?.user?.email} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-medium border overflow-hidden">
+                {session?.user?.image ? <img src={session.user.image} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover"/> : session?.user?.name?.charAt(0) || "U"}
               </div>
+              <Button variant="ghost" size="sm" onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => window.location.reload() } })}>
+                Sign Out
+              </Button>
             </div>
           </div>
         </div>
