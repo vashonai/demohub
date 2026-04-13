@@ -25,11 +25,16 @@ import {
   Eye,
   EyeOff,
   Filter,
+  Trash2,
+  RotateCcw,
+  Archive,
 } from "lucide-react";
 
 import { AppData } from "./data/apps";
 import { supabase } from "./lib/supabase";
 import { ProjectDialog } from "@/src/components/ProjectDialog";
+import { DeleteConfirmDialog } from "@/src/components/DeleteConfirmDialog";
+import { ArchiveConfirmDialog } from "@/src/components/ArchiveConfirmDialog";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import {
@@ -103,9 +108,31 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // ─── Bin state ───
+  const [showBin, setShowBin] = useState(false);
+  const [binnedApps, setBinnedApps] = useState<AppData[]>([]);
+  const [binnedCount, setBinnedCount] = useState(0);
+
+  // ─── Delete confirmation dialog state ───
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<AppData | null>(null);
+
+  // ─── Archive state ───
+  const [showArchive, setShowArchive] = useState(false);
+  const [archivedApps, setArchivedApps] = useState<AppData[]>([]);
+  const [archivedCount, setArchivedCount] = useState(0);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [projectToArchive, setProjectToArchive] = useState<AppData | null>(null);
+
   useEffect(() => {
     fetchProjects();
+    autoPurgeExpired();
   }, []);
+
+  useEffect(() => {
+    fetchBinnedCount();
+    fetchArchivedCount();
+  }, [apps]);
 
   async function fetchProjects() {
     setIsLoading(true);
@@ -114,6 +141,8 @@ export default function App() {
       const { data, error } = await supabase
         .from("projects")
         .select("*")
+        .is("deleted_at", null)
+        .is("archived_at", null)
         .order("name", { ascending: true });
 
       if (error) {
@@ -126,6 +155,43 @@ export default function App() {
       setErrorMsg("Fetch caught error: " + err?.message);
     }
     setIsLoading(false);
+  }
+
+  async function fetchBinnedProjects() {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false });
+
+    if (!error && data) {
+      setBinnedApps(data as AppData[]);
+    }
+  }
+
+  async function fetchBinnedCount() {
+    const { count, error } = await supabase
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .not("deleted_at", "is", null);
+
+    if (!error) {
+      setBinnedCount(count || 0);
+    }
+  }
+
+  async function autoPurgeExpired() {
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+    const { error } = await supabase
+      .from("projects")
+      .delete()
+      .lt("deleted_at", fiveDaysAgo.toISOString());
+
+    if (error) {
+      console.error("Auto-purge error:", error);
+    }
   }
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -141,7 +207,7 @@ export default function App() {
         .eq("id", editingProject.id);
 
       if (!error) {
-        await fetchProjects(); // sync
+        await fetchProjects();
       } else {
         console.error("Error updating project:", error);
         setErrorMsg("Update failed: " + error.message);
@@ -153,7 +219,7 @@ export default function App() {
         .select();
 
       if (!error && data) {
-        await fetchProjects(); // sync
+        await fetchProjects();
       } else {
         console.error("Error adding project:", error);
         setErrorMsg("Insert failed: " + error.message);
@@ -161,17 +227,121 @@ export default function App() {
     }
   };
 
-  const handleDeleteProject = async (id: string) => {
-    const { error } = await supabase.from("projects").delete().eq("id", id);
+  // ─── Soft delete (move to bin) ───
+  const handleSoftDelete = async (id: string) => {
+    const { error } = await supabase
+      .from("projects")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
 
     if (!error) {
-      // Forcefully refresh data directly from DB to mimic automatic refresh expectations
       await fetchProjects();
+      await fetchBinnedCount();
+      if (showBin) await fetchBinnedProjects();
     } else {
-      console.error("Error deleting project:", error);
+      console.error("Error soft-deleting project:", error);
       setErrorMsg("Delete failed: " + error.message);
     }
   };
+
+  // ─── Restore from bin ───
+  const handleRestore = async (id: string) => {
+    const { error } = await supabase
+      .from("projects")
+      .update({ deleted_at: null })
+      .eq("id", id);
+
+    if (!error) {
+      await fetchProjects();
+      await fetchBinnedProjects();
+      await fetchBinnedCount();
+    } else {
+      console.error("Error restoring project:", error);
+      setErrorMsg("Restore failed: " + error.message);
+    }
+  };
+
+  // ─── Permanent delete ───
+  const handlePermanentDelete = async (id: string) => {
+    const { error } = await supabase.from("projects").delete().eq("id", id);
+
+    if (!error) {
+      await fetchBinnedProjects();
+      await fetchBinnedCount();
+    } else {
+      console.error("Error permanently deleting:", error);
+      setErrorMsg("Permanent delete failed: " + error.message);
+    }
+  };
+
+  // ─── Open delete confirmation ───
+  const openDeleteConfirm = (app: AppData) => {
+    setProjectToDelete(app);
+    setDeleteDialogOpen(true);
+  };
+
+  // ─── Archive handlers ───
+  const openArchiveConfirm = (app: AppData) => {
+    setProjectToArchive(app);
+    setArchiveDialogOpen(true);
+  };
+
+  const handleArchive = async (id: string) => {
+    const { error } = await supabase
+      .from("projects")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (!error) {
+      await fetchProjects();
+      await fetchArchivedCount();
+      if (showArchive) await fetchArchivedProjects();
+    } else {
+      console.error("Error archiving project:", error);
+      setErrorMsg("Archive failed: " + error.message);
+    }
+  };
+
+  const handleUnarchive = async (id: string) => {
+    const { error } = await supabase
+      .from("projects")
+      .update({ archived_at: null })
+      .eq("id", id);
+
+    if (!error) {
+      await fetchProjects();
+      await fetchArchivedProjects();
+      await fetchArchivedCount();
+    } else {
+      console.error("Error unarchiving:", error);
+      setErrorMsg("Unarchive failed: " + error.message);
+    }
+  };
+
+  async function fetchArchivedProjects() {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .not("archived_at", "is", null)
+      .is("deleted_at", null)
+      .order("archived_at", { ascending: false });
+
+    if (!error && data) {
+      setArchivedApps(data as AppData[]);
+    }
+  }
+
+  async function fetchArchivedCount() {
+    const { count, error } = await supabase
+      .from("projects")
+      .select("*", { count: "exact", head: true })
+      .not("archived_at", "is", null)
+      .is("deleted_at", null);
+
+    if (!error) {
+      setArchivedCount(count || 0);
+    }
+  }
 
   const categories = useMemo(() => {
     const cats = new Set(apps.map((app) => app.category));
@@ -188,9 +358,8 @@ export default function App() {
             .includes(searchQuery.toLowerCase());
         const matchesCategory =
           categoryFilter === "all" || app.category === categoryFilter;
-        // Default: only show projects with at least one link
-        const hasLink = app.demoUrl || app.docsUrl;
-        const matchesLinkFilter = showAll || hasLink;
+        // Default: only show projects with a demo URL
+        const matchesLinkFilter = showAll || !!app.demoUrl;
         return matchesSearch && matchesCategory && matchesLinkFilter;
       })
       .sort((a, b) => {
@@ -255,6 +424,40 @@ export default function App() {
               >
                 <Plus className="w-4 h-4" />
                 New App
+              </Button>
+              <Button
+                variant={showBin ? "secondary" : "ghost"}
+                size="icon"
+                className="relative"
+                onClick={() => {
+                  setShowBin(!showBin);
+                  if (!showBin) fetchBinnedProjects();
+                }}
+                title="Deletion Bin"
+              >
+                <Trash2 className="w-4 h-4" />
+                {binnedCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {binnedCount > 9 ? "9+" : binnedCount}
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant={showArchive ? "secondary" : "ghost"}
+                size="icon"
+                className="relative"
+                onClick={() => {
+                  setShowArchive(!showArchive);
+                  if (!showArchive) fetchArchivedProjects();
+                }}
+                title="Archived Projects"
+              >
+                <Archive className="w-4 h-4" />
+                {archivedCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {archivedCount > 9 ? "9+" : archivedCount}
+                  </span>
+                )}
               </Button>
               <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-xs font-bold text-white shadow-md">
                 IB
@@ -384,6 +587,177 @@ export default function App() {
           </p>
         </div>
 
+        {/* ─── Bin View ─── */}
+        {showBin && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-destructive" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Deletion Bin</h3>
+                <p className="text-sm text-muted-foreground">
+                  Projects are permanently deleted after 5 days
+                </p>
+              </div>
+            </div>
+
+            {binnedApps.length === 0 ? (
+              <div className="py-12 text-center border border-dashed rounded-xl">
+                <Trash2 className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground">No deleted projects</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {binnedApps.map((app) => {
+                  const deletedDate = new Date(app.deleted_at!);
+                  const expiresDate = new Date(deletedDate);
+                  expiresDate.setDate(expiresDate.getDate() + 5);
+                  const daysLeft = Math.max(
+                    0,
+                    Math.ceil(
+                      (expiresDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                    )
+                  );
+
+                  return (
+                    <div
+                      key={app.id}
+                      className="flex items-center gap-4 p-4 rounded-xl border bg-card ring-1 ring-destructive/10"
+                    >
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 opacity-60"
+                        style={{ background: getGradientForId(app.id) }}
+                      >
+                        {(() => {
+                          const Icon = iconMap[app.icon] || LayoutGrid;
+                          return <Icon className="w-4 h-4 text-white" />;
+                        })()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm line-through opacity-70">
+                          {app.name}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Deleted{" "}
+                          {deletedDate.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                          {" · "}
+                          <span
+                            className={daysLeft <= 1 ? "text-destructive font-medium" : ""}
+                          >
+                            {daysLeft} day{daysLeft !== 1 ? "s" : ""} until permanent
+                            deletion
+                          </span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-7 text-xs"
+                          onClick={() => handleRestore(app.id)}
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          Restore
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="gap-1.5 h-7 text-xs"
+                          onClick={() => handlePermanentDelete(app.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete Forever
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <Separator className="mt-8" />
+          </div>
+        )}
+
+        {/* ─── Archive View ─── */}
+        {showArchive && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <Archive className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Archived Projects</h3>
+                <p className="text-sm text-muted-foreground">
+                  Projects removed from the main view
+                </p>
+              </div>
+            </div>
+
+            {archivedApps.length === 0 ? (
+              <div className="py-12 text-center border border-dashed rounded-xl">
+                <Archive className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground">No archived projects</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {archivedApps.map((app) => {
+                  const archivedDate = new Date(app.archived_at!);
+                  return (
+                    <div
+                      key={app.id}
+                      className="flex items-center gap-4 p-4 rounded-xl border bg-card ring-1 ring-amber-500/10"
+                    >
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 opacity-70"
+                        style={{ background: getGradientForId(app.id) }}
+                      >
+                        {(() => {
+                          const Icon = iconMap[app.icon] || LayoutGrid;
+                          return <Icon className="w-4 h-4 text-white" />;
+                        })()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm">
+                          {app.name}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Archived{" "}
+                          {archivedDate.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                          {app.category && (
+                            <span> · {app.category}</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-7 text-xs"
+                          onClick={() => handleUnarchive(app.id)}
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          Unarchive
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <Separator className="mt-8" />
+          </div>
+        )}
+
         {/* Grid/List View */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -416,7 +790,8 @@ export default function App() {
                     setEditingProject(app);
                     setIsDialogOpen(true);
                   }}
-                  onDelete={() => handleDeleteProject(app.id)}
+                  onDelete={() => openDeleteConfirm(app)}
+                  onArchive={() => openArchiveConfirm(app)}
                 />
               ))
             ) : (
@@ -521,6 +896,34 @@ export default function App() {
         onSave={handleSaveProject}
         initialData={editingProject}
       />
+
+      <DeleteConfirmDialog
+        isOpen={deleteDialogOpen}
+        projectName={projectToDelete?.name || ""}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setProjectToDelete(null);
+        }}
+        onConfirm={() => {
+          if (projectToDelete) {
+            handleSoftDelete(projectToDelete.id);
+          }
+        }}
+      />
+
+      <ArchiveConfirmDialog
+        isOpen={archiveDialogOpen}
+        projectName={projectToArchive?.name || ""}
+        onClose={() => {
+          setArchiveDialogOpen(false);
+          setProjectToArchive(null);
+        }}
+        onConfirm={() => {
+          if (projectToArchive) {
+            handleArchive(projectToArchive.id);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -567,9 +970,10 @@ interface AppCardProps {
   key?: string | number;
   onEdit: () => void;
   onDelete: () => void;
+  onArchive: () => void;
 }
 
-function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
+function AppCard({ app, viewMode, onEdit, onDelete, onArchive }: AppCardProps) {
   const Icon = iconMap[app.icon] || LayoutGrid;
   const linkUrl = app.demoUrl || app.docsUrl;
 
@@ -648,7 +1052,7 @@ function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
           </div>
 
           {/* Docs + link indicator + actions */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
             {app.docsUrl && (
               <Button
                 variant="outline"
@@ -681,6 +1085,10 @@ function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
                   <DropdownMenuItem onClick={onEdit}>
                     Edit Project
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onArchive}>
+                    Archive Project
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem variant="destructive" onClick={onDelete}>
                     Delete Project
                   </DropdownMenuItem>
@@ -696,14 +1104,14 @@ function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
   // ─── Grid card ───
   return (
     <Card
-      className={`flex flex-col h-full transition-all duration-300 group border-muted/60 hover:border-primary/20 card-hover-lift overflow-hidden ${linkUrl ? "card-clickable" : ""}`}
+      className={`relative flex flex-col h-full transition-all duration-300 group border-muted/60 hover:border-primary/20 card-hover-lift overflow-hidden ${linkUrl ? "card-clickable" : ""}`}
       onClick={handleCardClick}
     >
       {/* Iframe preview / gradient fallback */}
       <IframePreview url={app.demoUrl} appId={app.id} icon={app.icon} />
 
       {/* Card actions overlay */}
-      <div className="card-actions-overlay">
+      <div className="card-actions-overlay" onClick={e => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -718,6 +1126,8 @@ function AppCard({ app, viewMode, onEdit, onDelete }: AppCardProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={onEdit}>Edit Project</DropdownMenuItem>
+            <DropdownMenuItem onClick={onArchive}>Archive Project</DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={onDelete}>
               Delete Project
             </DropdownMenuItem>
