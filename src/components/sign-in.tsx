@@ -10,7 +10,7 @@ import {
   CardFooter,
 } from "@/src/components/ui/card";
 import { useState } from "react";
-import { Loader2, Key } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import { authClient } from "@/src/lib/auth-client";
 import { cn } from "@/lib/utils";
 
@@ -18,19 +18,34 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
 
   return (
-    <div className="flex flex-col items-center justify-center w-full max-w-[420px]">
-      <Card className="w-full shadow-sm border-muted/50 rounded-2xl">
-        <CardHeader className="pb-6">
-          <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
+    <div className="flex flex-col items-center justify-center w-full max-w-[420px] px-4">
+      {/* Logo Area */}
+      <div className="flex flex-col items-center justify-center mb-10 gap-4">
+        <div className="brand-gradient p-3.5 rounded-2xl shadow-lg shadow-black/10 flex items-center justify-center">
+          <LayoutGrid className="w-7 h-7 text-white" />
+        </div>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold tracking-tight leading-tight brand-gradient-text">
+            INTELLIBUS
+          </h1>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1.5">
+            Demo Hub Platform
+          </p>
+        </div>
+      </div>
+
+      <Card className="w-full shadow-2xl shadow-black/5 border-muted/50 rounded-2xl overflow-hidden">
+        <CardHeader className="pb-6 border-b border-muted/20 bg-muted/10 text-center">
+          <CardTitle className="text-xl font-bold">Secure Portal Login</CardTitle>
           <CardDescription className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-            Sign in with your Google account to access the platform
+            Authenticate with your corporate identity
           </CardDescription>
         </CardHeader>
-        <CardContent className="pb-8">
+        <CardContent className="pt-8 pb-8 px-6 sm:px-10">
           <div className="w-full">
             <Button
               variant="outline"
-              className="w-full h-12 text-[15px] font-medium flex items-center justify-center gap-3 rounded-xl shadow-sm border-muted-foreground/20 hover:bg-muted/30 hover:text-foreground"
+              className="w-full h-14 text-[15px] font-medium flex items-center justify-center gap-3 rounded-xl shadow-sm border-muted-foreground/20 hover:bg-muted/30 hover:shadow transition-all duration-200"
               disabled={loading}
               onClick={async () => {
                 await authClient.signIn.social(
@@ -78,9 +93,9 @@ export default function SignIn() {
         </CardContent>
       </Card>
 
-      <div className="mt-8 text-center text-sm text-muted-foreground/80 px-4 leading-relaxed">
-        Sign in with your Google account to access the platform.<br />
-        Your portal access is determined by your account role.
+      <div className="mt-10 text-center text-xs text-muted-foreground/60 px-4 leading-relaxed max-w-sm">
+        Secure Access Control. Authorized personnel only.<br />
+        Permissions are role-based and strictly monitored.
       </div>
     </div>
   );
