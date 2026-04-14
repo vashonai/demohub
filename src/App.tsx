@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Search,
@@ -34,7 +35,7 @@ import { authClient } from "./lib/auth-client";
 import { AppData } from "./data/apps";
 import { supabase } from "./lib/supabase";
 import SignIn from "./components/sign-in";
-import { ProjectDialog } from "@/src/components/ProjectDialog";
+
 import { DeleteConfirmDialog } from "@/src/components/DeleteConfirmDialog";
 import { ArchiveConfirmDialog } from "@/src/components/ArchiveConfirmDialog";
 import { Button } from "@/src/components/ui/button";
@@ -99,6 +100,7 @@ function getGradientForId(id: string): string {
 }
 
 export default function App() {
+  const navigate = useNavigate();
   const { data: session, isPending: isAuthPending } = authClient.useSession();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -198,38 +200,7 @@ export default function App() {
     }
   }
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProject, setEditingProject] = useState<AppData | undefined>(
-    undefined,
-  );
 
-  const handleSaveProject = async (projectData: Partial<AppData>) => {
-    if (editingProject) {
-      const { error } = await supabase
-        .from("projects")
-        .update(projectData)
-        .eq("id", editingProject.id);
-
-      if (!error) {
-        await fetchProjects();
-      } else {
-        console.error("Error updating project:", error);
-        setErrorMsg("Update failed: " + error.message);
-      }
-    } else {
-      const { data, error } = await supabase
-        .from("projects")
-        .insert([projectData])
-        .select();
-
-      if (!error && data) {
-        await fetchProjects();
-      } else {
-        console.error("Error adding project:", error);
-        setErrorMsg("Insert failed: " + error.message);
-      }
-    }
-  };
 
   // ─── Soft delete (move to bin) ───
   const handleSoftDelete = async (id: string) => {
@@ -420,11 +391,13 @@ export default function App() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="brand-gradient p-2 rounded-xl shadow-md">
-                <LayoutGrid className="w-5 h-5 text-white" />
-              </div>
+              <img
+                src="/logo.svg"
+                alt="Intellibus Logo"
+                className="w-9 h-9"
+              />
               <div className="flex flex-col">
-                <h1 className="text-lg font-bold tracking-tight leading-tight brand-gradient-text">
+                <h1 className="text-lg font-bold tracking-tight leading-tight" style={{ color: '#0D5495' }}>
                   INTELLIBUS
                 </h1>
                 <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest leading-none">
@@ -438,10 +411,7 @@ export default function App() {
                 variant="outline"
                 size="sm"
                 className="hidden sm:flex items-center gap-2"
-                onClick={() => {
-                  setEditingProject(undefined);
-                  setIsDialogOpen(true);
-                }}
+                onClick={() => navigate('/project/new')}
               >
                 <Plus className="w-4 h-4" />
                 New App
@@ -810,10 +780,7 @@ export default function App() {
                   key={app.id}
                   app={app}
                   viewMode={viewMode}
-                  onEdit={() => {
-                    setEditingProject(app);
-                    setIsDialogOpen(true);
-                  }}
+                  onEdit={() => navigate(`/project/${app.id}/edit`)}
                   onDelete={() => openDeleteConfirm(app)}
                   onArchive={() => openArchiveConfirm(app)}
                 />
@@ -903,10 +870,12 @@ export default function App() {
       <footer className="border-t mt-20 py-8 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center gap-3">
-            <div className="brand-gradient p-1.5 rounded-lg shadow-sm">
-              <LayoutGrid className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold brand-gradient-text">INTELLIBUS</span>
+            <img
+              src="/logo.svg"
+              alt="Intellibus Logo"
+              className="w-7 h-7"
+            />
+            <span className="font-bold" style={{ color: '#0D5495' }}>INTELLIBUS</span>
             <span className="text-muted-foreground text-sm ml-2">
               © 2026 Intellibus
             </span>
@@ -914,12 +883,7 @@ export default function App() {
         </div>
       </footer>
 
-      <ProjectDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onSave={handleSaveProject}
-        initialData={editingProject}
-      />
+
 
       <DeleteConfirmDialog
         isOpen={deleteDialogOpen}

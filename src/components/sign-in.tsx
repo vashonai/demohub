@@ -10,7 +10,7 @@ import {
   CardFooter,
 } from "@/src/components/ui/card";
 import { useState } from "react";
-import { LayoutGrid } from "lucide-react";
+
 import { authClient } from "@/src/lib/auth-client";
 import { cn } from "@/lib/utils";
 
@@ -21,11 +21,13 @@ export default function SignIn() {
     <div className="flex flex-col items-center justify-center w-full max-w-[420px] px-4">
       {/* Logo Area */}
       <div className="flex flex-col items-center justify-center mb-10 gap-4">
-        <div className="brand-gradient p-3.5 rounded-2xl shadow-lg shadow-black/10 flex items-center justify-center">
-          <LayoutGrid className="w-7 h-7 text-white" />
-        </div>
+        <img
+          src="/logo.svg"
+          alt="Intellibus Logo"
+          className="w-14 h-14"
+        />
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight leading-tight brand-gradient-text">
+          <h1 className="text-3xl font-bold tracking-tight leading-tight" style={{ color: '#0D5495' }}>
             INTELLIBUS
           </h1>
           <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1.5">
