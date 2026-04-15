@@ -11,7 +11,11 @@ export const auth = betterAuth({
     ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
   }),
   baseURL: process.env.BETTER_AUTH_URL,
-  trustedProxies: true,
+  onAPIError: {
+    onError: (error: any) => {
+      console.error("Better Auth API Error:", error);
+    },
+  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
