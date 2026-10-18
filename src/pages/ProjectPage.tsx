@@ -28,8 +28,7 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 import { CategoryCombobox } from "@/src/components/CategoryCombobox";
-import { AppData } from "@/src/data/apps";
-import { supabase } from "@/src/lib/supabase";
+import { Project, getProjectById, upsertProject, loadAllProjects } from "@/src/data/projects";
 
 const iconOptions = [
   { value: "Briefcase", label: "Briefcase", Icon: Briefcase },
@@ -60,7 +59,7 @@ export default function ProjectPage() {
   const [lead, setLead] = useState("");
   const [demoUrl, setDemoUrl] = useState("");
   const [docsUrl, setDocsUrl] = useState("");
-  const [category, setCategory] = useState("Internal Project");
+  const [category, setCategory] = useState("Web & Cloud");
   const [icon, setIcon] = useState("Briefcase");
   const [status, setStatus] = useState<"active" | "beta" | "deprecated">(
     "active"
@@ -71,109 +70,69 @@ export default function ProjectPage() {
   const [isLoadingProject, setIsLoadingProject] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // All categories from DB
+  // All categories
   const [allCategories, setAllCategories] = useState<string[]>([]);
 
   // Fetch all distinct categories
   useEffect(() => {
-    async function fetchCategories() {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("category")
-        .not("category", "is", null);
-
-      if (!error && data) {
-        const unique = [
-          ...new Set(
-            data
-              .map((d: { category: string }) => d.category)
-              .filter(Boolean)
-          ),
-        ].sort() as string[];
-        setAllCategories(unique);
-      }
-    }
-    fetchCategories();
+    const all = loadAllProjects();
+    const unique = [
+      ...new Set(
+        all
+          .map((d) => d.category)
+          .filter(Boolean)
+      ),
+    ].sort() as string[];
+    setAllCategories(unique);
   }, []);
 
   // If editing, fetch the project
   useEffect(() => {
     if (!id) return;
+    setIsLoadingProject(true);
+    const project = getProjectById(id);
 
-    async function fetchProject() {
-      setIsLoadingProject(true);
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error || !data) {
-        setErrorMsg("Project not found");
-        setIsLoadingProject(false);
-        return;
-      }
-
-      const project = data as AppData;
-      setName(project.name || "");
-      setDescription(project.description || "");
-      setLead(project.lead || "");
-      setDemoUrl(project.demoUrl || "");
-      setDocsUrl(project.docsUrl || "");
-      setCategory(project.category || "Internal Project");
-      setIcon(project.icon || "Briefcase");
-      setStatus(project.status || "active");
+    if (!project) {
+      setErrorMsg("Project not found");
       setIsLoadingProject(false);
+      return;
     }
 
-    fetchProject();
+    setName(project.name || "");
+    setDescription(project.description || "");
+    setLead(project.lead || "");
+    setDemoUrl(project.demoUrl || "");
+    setDocsUrl(project.docsUrl || "");
+    setCategory(project.category || "General");
+    setIcon(project.icon || "Briefcase");
+    setStatus(project.status || "active");
+    setIsLoadingProject(false);
   }, [id]);
 
-  const handleSave = async () => {
-    if (!name.trim()) return;
+  const handleSave = () => {
+    if (!name.trim()) {
+      setErrorMsg("Project name is required.");
+      return;
+    }
     setIsSaving(true);
     setErrorMsg(null);
 
-    const projectData: Partial<AppData> = {
-      name: name.trim(),
-      description,
-      lead,
-      demoUrl,
-      docsUrl,
-      category: category || "Internal Project",
-      icon,
-      status,
-      lastUpdated: new Date().toISOString().split("T")[0],
-    };
-
     try {
-      if (isEdit) {
-        const { error } = await supabase
-          .from("projects")
-          .update(projectData)
-          .eq("id", id);
-
-        if (error) {
-          setErrorMsg("Update failed: " + error.message);
-          setIsSaving(false);
-          return;
-        }
-      } else {
-        const { error } = await supabase
-          .from("projects")
-          .insert([projectData])
-          .select();
-
-        if (error) {
-          setErrorMsg("Create failed: " + error.message);
-          setIsSaving(false);
-          return;
-        }
-      }
+      upsertProject({
+        ...(isEdit ? { id } : {}),
+        name: name.trim(),
+        description: description.trim(),
+        lead: lead.trim() || "Aivora Labs",
+        demoUrl: demoUrl.trim(),
+        docsUrl: docsUrl.trim(),
+        category: category.trim() || "Web & Cloud",
+        icon,
+        status,
+      });
 
       navigate("/");
     } catch (err: any) {
-      setErrorMsg("Error: " + err?.message);
+      setErrorMsg("Error saving project: " + err?.message);
       setIsSaving(false);
     }
   };
@@ -205,21 +164,20 @@ export default function ProjectPage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
               <img
                 src="/logo.svg"
-                alt="Intellibus Logo"
+                alt="Aivora Labs Logo"
                 className="w-8 h-8"
               />
               <div className="flex flex-col">
                 <h1
-                  className="text-lg font-bold tracking-tight leading-tight"
-                  style={{ color: "#0D5495" }}
+                  className="text-lg font-bold tracking-tight leading-tight bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent"
                 >
-                  INTELLIBUS
+                  AIVORA LABS
                 </h1>
-                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest leading-none">
-                  Demo Hub
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest leading-none">
+                  Project Showcase
                 </span>
               </div>
             </div>
@@ -286,11 +244,11 @@ export default function ProjectPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="project-lead" className="text-sm font-medium">
-                  Project Lead
+                  Creator / Lead
                 </Label>
                 <Input
                   id="project-lead"
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. Alex Morgan"
                   value={lead}
                   onChange={(e) => setLead(e.target.value)}
                   className="h-11"
@@ -353,11 +311,11 @@ export default function ProjectPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="project-demo-url" className="text-sm font-medium">
-                  Demo URL
+                  Live Demo URL (Web Link)
                 </Label>
                 <Input
                   id="project-demo-url"
-                  placeholder="https://..."
+                  placeholder="https://app.example.com"
                   value={demoUrl}
                   onChange={(e) => setDemoUrl(e.target.value)}
                   className="h-11"
@@ -366,11 +324,11 @@ export default function ProjectPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="project-docs-url" className="text-sm font-medium">
-                  Documentation Link
+                  Documentation or GitHub URL
                 </Label>
                 <Input
                   id="project-docs-url"
-                  placeholder="https://..."
+                  placeholder="https://github.com/... or docs link"
                   value={docsUrl}
                   onChange={(e) => setDocsUrl(e.target.value)}
                   className="h-11"

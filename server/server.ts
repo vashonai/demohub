@@ -4,18 +4,12 @@ dotenv.config({ path: ".env.local" });
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import { toNodeHandler } from "better-auth/node";
-import { auth } from "../src/lib/auth";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3000;
-
-// Mount better-auth handler
-app.all("/api/auth/*", toNodeHandler(auth));
 
 // Other middleware
 app.use(express.json());

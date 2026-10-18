@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -31,13 +31,19 @@ import {
   Archive,
 } from "lucide-react";
 
-import { authClient } from "./lib/auth-client";
-import { AppData } from "./data/apps";
-import { supabase } from "./lib/supabase";
-import SignIn from "./components/sign-in";
+import {
+  Project,
+  loadAllProjects,
+  softDeleteProject,
+  restoreProject,
+  permanentDeleteProject,
+  archiveProject,
+  unarchiveProject,
+} from "./data/projects";
 
 import { DeleteConfirmDialog } from "@/src/components/DeleteConfirmDialog";
 import { ArchiveConfirmDialog } from "@/src/components/ArchiveConfirmDialog";
+import { Navbar } from "@/src/components/Navbar";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import {
@@ -101,7 +107,7 @@ function getGradientForId(id: string): string {
 
 export default function App() {
   const navigate = useNavigate();
-  const { data: session, isPending: isAuthPending } = authClient.useSession();
+
 
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -110,213 +116,112 @@ export default function App() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [apps, setApps] = useState<AppData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [apps, setApps] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // ─── Bin state ───
   const [showBin, setShowBin] = useState(false);
-  const [binnedApps, setBinnedApps] = useState<AppData[]>([]);
+  const [binnedApps, setBinnedApps] = useState<Project[]>([]);
   const [binnedCount, setBinnedCount] = useState(0);
 
   // ─── Delete confirmation dialog state ───
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<AppData | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
   // ─── Archive state ───
   const [showArchive, setShowArchive] = useState(false);
-  const [archivedApps, setArchivedApps] = useState<AppData[]>([]);
+  const [archivedApps, setArchivedApps] = useState<Project[]>([]);
   const [archivedCount, setArchivedCount] = useState(0);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [projectToArchive, setProjectToArchive] = useState<AppData | null>(null);
+  const [projectToArchive, setProjectToArchive] = useState<Project | null>(null);
 
   useEffect(() => {
     fetchProjects();
-    autoPurgeExpired();
-  }, []);
-
-  useEffect(() => {
     fetchBinnedCount();
     fetchArchivedCount();
-  }, [apps]);
+  }, []);
 
-  async function fetchProjects() {
+  function fetchProjects() {
     setIsLoading(true);
-    setErrorMsg(null);
-    try {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .is("deleted_at", null)
-        .is("archived_at", null)
-        .order("name", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching projects:", error);
-        setErrorMsg("Error fetching: " + error.message);
-      } else {
-        setApps(data as AppData[]);
-      }
-    } catch (err: any) {
-      setErrorMsg("Fetch caught error: " + err?.message);
-    }
+    const all = loadAllProjects();
+    const active = all.filter((p) => !p.deleted_at && !p.archived_at);
+    setApps(active);
     setIsLoading(false);
   }
 
-  async function fetchBinnedProjects() {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .not("deleted_at", "is", null)
-      .order("deleted_at", { ascending: false });
-
-    if (!error && data) {
-      setBinnedApps(data as AppData[]);
-    }
+  function fetchBinnedProjects() {
+    const all = loadAllProjects();
+    const binned = all.filter((p) => !!p.deleted_at);
+    setBinnedApps(binned);
   }
 
-  async function fetchBinnedCount() {
-    const { count, error } = await supabase
-      .from("projects")
-      .select("*", { count: "exact", head: true })
-      .not("deleted_at", "is", null);
-
-    if (!error) {
-      setBinnedCount(count || 0);
-    }
+  function fetchBinnedCount() {
+    const all = loadAllProjects();
+    const count = all.filter((p) => !!p.deleted_at).length;
+    setBinnedCount(count);
   }
 
-  async function autoPurgeExpired() {
-    const fiveDaysAgo = new Date();
-    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-
-    const { error } = await supabase
-      .from("projects")
-      .delete()
-      .lt("deleted_at", fiveDaysAgo.toISOString());
-
-    if (error) {
-      console.error("Auto-purge error:", error);
-    }
+  function fetchArchivedProjects() {
+    const all = loadAllProjects();
+    const archived = all.filter((p) => !!p.archived_at && !p.deleted_at);
+    setArchivedApps(archived);
   }
 
-
+  function fetchArchivedCount() {
+    const all = loadAllProjects();
+    const count = all.filter((p) => !!p.archived_at && !p.deleted_at).length;
+    setArchivedCount(count);
+  }
 
   // ─── Soft delete (move to bin) ───
-  const handleSoftDelete = async (id: string) => {
-    const { error } = await supabase
-      .from("projects")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (!error) {
-      await fetchProjects();
-      await fetchBinnedCount();
-      if (showBin) await fetchBinnedProjects();
-    } else {
-      console.error("Error soft-deleting project:", error);
-      setErrorMsg("Delete failed: " + error.message);
-    }
+  const handleSoftDelete = (id: string) => {
+    softDeleteProject(id);
+    fetchProjects();
+    fetchBinnedCount();
+    if (showBin) fetchBinnedProjects();
   };
 
   // ─── Restore from bin ───
-  const handleRestore = async (id: string) => {
-    const { error } = await supabase
-      .from("projects")
-      .update({ deleted_at: null })
-      .eq("id", id);
-
-    if (!error) {
-      await fetchProjects();
-      await fetchBinnedProjects();
-      await fetchBinnedCount();
-    } else {
-      console.error("Error restoring project:", error);
-      setErrorMsg("Restore failed: " + error.message);
-    }
+  const handleRestore = (id: string) => {
+    restoreProject(id);
+    fetchProjects();
+    fetchBinnedProjects();
+    fetchBinnedCount();
   };
 
   // ─── Permanent delete ───
-  const handlePermanentDelete = async (id: string) => {
-    const { error } = await supabase.from("projects").delete().eq("id", id);
-
-    if (!error) {
-      await fetchBinnedProjects();
-      await fetchBinnedCount();
-    } else {
-      console.error("Error permanently deleting:", error);
-      setErrorMsg("Permanent delete failed: " + error.message);
-    }
+  const handlePermanentDelete = (id: string) => {
+    permanentDeleteProject(id);
+    fetchBinnedProjects();
+    fetchBinnedCount();
   };
 
   // ─── Open delete confirmation ───
-  const openDeleteConfirm = (app: AppData) => {
+  const openDeleteConfirm = (app: Project) => {
     setProjectToDelete(app);
     setDeleteDialogOpen(true);
   };
 
   // ─── Archive handlers ───
-  const openArchiveConfirm = (app: AppData) => {
+  const openArchiveConfirm = (app: Project) => {
     setProjectToArchive(app);
     setArchiveDialogOpen(true);
   };
 
-  const handleArchive = async (id: string) => {
-    const { error } = await supabase
-      .from("projects")
-      .update({ archived_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (!error) {
-      await fetchProjects();
-      await fetchArchivedCount();
-      if (showArchive) await fetchArchivedProjects();
-    } else {
-      console.error("Error archiving project:", error);
-      setErrorMsg("Archive failed: " + error.message);
-    }
+  const handleArchive = (id: string) => {
+    archiveProject(id);
+    fetchProjects();
+    fetchArchivedCount();
+    if (showArchive) fetchArchivedProjects();
   };
 
-  const handleUnarchive = async (id: string) => {
-    const { error } = await supabase
-      .from("projects")
-      .update({ archived_at: null })
-      .eq("id", id);
-
-    if (!error) {
-      await fetchProjects();
-      await fetchArchivedProjects();
-      await fetchArchivedCount();
-    } else {
-      console.error("Error unarchiving:", error);
-      setErrorMsg("Unarchive failed: " + error.message);
-    }
+  const handleUnarchive = (id: string) => {
+    unarchiveProject(id);
+    fetchProjects();
+    fetchArchivedProjects();
+    fetchArchivedCount();
   };
-
-  async function fetchArchivedProjects() {
-    const { data, error } = await supabase
-      .from("projects")
-      .select("*")
-      .not("archived_at", "is", null)
-      .is("deleted_at", null)
-      .order("archived_at", { ascending: false });
-
-    if (!error && data) {
-      setArchivedApps(data as AppData[]);
-    }
-  }
-
-  async function fetchArchivedCount() {
-    const { count, error } = await supabase
-      .from("projects")
-      .select("*", { count: "exact", head: true })
-      .not("archived_at", "is", null)
-      .is("deleted_at", null);
-
-    if (!error) {
-      setArchivedCount(count || 0);
-    }
-  }
 
   const categories = useMemo(() => {
     const cats = new Set(apps.map((app) => app.category));
@@ -367,219 +272,45 @@ export default function App() {
     [totalPages],
   );
 
-  if (isAuthPending) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-        <p className="text-muted-foreground">Loading session...</p>
-      </div>
-    );
-  }
 
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <SignIn />
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo.svg"
-                alt="Intellibus Logo"
-                className="w-9 h-9"
-              />
-              <div className="flex flex-col">
-                <h1 className="text-lg font-bold tracking-tight leading-tight" style={{ color: '#0D5495' }}>
-                  INTELLIBUS
-                </h1>
-                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest leading-none">
-                  Demo Hub
-                </span>
-              </div>
-            </div>
+    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary selection:text-primary-foreground flex flex-col">
+      {/* Navigation */}
+      <Navbar />
 
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden sm:flex items-center gap-2"
-                onClick={() => navigate('/project/new')}
-              >
-                <Plus className="w-4 h-4" />
-                New App
-              </Button>
-              <Button
-                variant={showBin ? "secondary" : "ghost"}
-                size="icon"
-                className="relative"
-                onClick={() => {
-                  setShowBin(!showBin);
-                  if (!showBin) fetchBinnedProjects();
-                }}
-                title="Deletion Bin"
-              >
-                <Trash2 className="w-4 h-4" />
-                {binnedCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {binnedCount > 9 ? "9+" : binnedCount}
-                  </span>
-                )}
-              </Button>
-              <Button
-                variant={showArchive ? "secondary" : "ghost"}
-                size="icon"
-                className="relative"
-                onClick={() => {
-                  setShowArchive(!showArchive);
-                  if (!showArchive) fetchArchivedProjects();
-                }}
-                title="Archived Projects"
-              >
-                <Archive className="w-4 h-4" />
-                {archivedCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {archivedCount > 9 ? "9+" : archivedCount}
-                  </span>
-                )}
-              </Button>
-              <div title={session?.user?.email} className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-xs font-bold text-white shadow-md border overflow-hidden">
-                {session?.user?.image ? <img src={session.user.image} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full object-cover bg-background"/> : session?.user?.name?.charAt(0)?.toUpperCase() || "U"}
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => window.location.reload() } })}>
-                Sign Out
-              </Button>
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 flex-1">
+        {/* ─── Showcase Section Header ─── */}
+        <div className="mb-5">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-3 border-b">
+            <div>
+              <span className="text-xs uppercase tracking-luxury font-bold text-indigo-600 dark:text-indigo-400 block mb-1">
+                Portfolio Showcase
+              </span>
+              <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-foreground">
+                Customer Websites &amp; Landing Pages
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl font-light">
+                Explore the bespoke websites and high-converting landing pages we've built for customer businesses. Interact directly with live previews or launch full sites in a new tab.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+                Live Demos Active
+              </span>
             </div>
           </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section */}
-        <div className="mb-10">
-          <h2 className="text-3xl font-bold tracking-tight mb-2">
-            Internal Application Hub
-          </h2>
-          <p className="text-muted-foreground max-w-2xl">
-            Access all internal tools, demos, and documentation from a single
-            central point. Streamline your workflow and stay updated with the
-            latest releases.
-          </p>
         </div>
 
         {errorMsg && (
-          <div className="bg-destructive/15 text-destructive p-4 rounded-md mb-6 border border-destructive/30">
-            <h3 className="font-semibold">Oops! Something went wrong</h3>
-            <p className="text-sm">{errorMsg}</p>
+          <div className="bg-destructive/15 text-destructive p-3 rounded-md mb-4 border border-destructive/30">
+            <h3 className="font-semibold text-sm">Oops! Something went wrong</h3>
+            <p className="text-xs">{errorMsg}</p>
           </div>
         )}
 
-        {/* ─── Controls Bar: Search (left) | Filters (right) ─── */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-8">
-          {/* Search — left */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              id="search-input"
-              placeholder="Search projects..."
-              className="pl-10 w-full bg-muted/50 border-none focus-visible:ring-1"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
 
-          {/* Filters — right */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Category dropdown */}
-            <Select
-              value={categoryFilter}
-              onValueChange={(v: any) => setCategoryFilter(v)}
-            >
-              <SelectTrigger className="w-[160px] bg-muted/50 border-none">
-                <Filter className="w-3.5 h-3.5 mr-2 opacity-50" />
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    <span className="capitalize">{cat === "all" ? "All Categories" : cat}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Sort dropdown */}
-            <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
-              <SelectTrigger className="w-[160px] bg-muted/50 border-none">
-                <ArrowUpDown className="w-3.5 h-3.5 mr-2 opacity-50" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Name (A-Z)</SelectItem>
-                <SelectItem value="date">Recently Updated</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Separator orientation="vertical" className="h-8 mx-1 hidden sm:block" />
-
-            {/* Show All toggle */}
-            <Button
-              variant={showAll ? "secondary" : "outline"}
-              size="sm"
-              className="gap-1.5"
-              onClick={() => setShowAll(!showAll)}
-              title={showAll ? "Showing all projects" : "Showing only projects with links"}
-            >
-              {showAll ? (
-                <Eye className="w-3.5 h-3.5" />
-              ) : (
-                <EyeOff className="w-3.5 h-3.5" />
-              )}
-              <span className="hidden sm:inline">{showAll ? "All" : "With Links"}</span>
-            </Button>
-
-            <Separator orientation="vertical" className="h-8 mx-1 hidden sm:block" />
-
-            {/* View mode toggle */}
-            <div className="flex items-center bg-muted/50 rounded-lg p-1">
-              <Button
-                variant={viewMode === "grid" ? "secondary" : "ghost"}
-                size="icon"
-                className="w-8 h-8"
-                onClick={() => setViewMode("grid")}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "secondary" : "ghost"}
-                size="icon"
-                className="w-8 h-8"
-                onClick={() => setViewMode("list")}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Results count */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-muted-foreground">
-            {filteredApps.length} project{filteredApps.length !== 1 ? "s" : ""} found
-            {!showAll && (
-              <span className="ml-1 opacity-70">
-                · showing projects with links only
-              </span>
-            )}
-          </p>
-        </div>
 
         {/* ─── Bin View ─── */}
         {showBin && (
@@ -762,16 +493,16 @@ export default function App() {
             transition={{ duration: 0.2 }}
             className={
               viewMode === "grid"
-                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                : "flex flex-col gap-4"
+                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5"
+                : "flex flex-col gap-3"
             }
           >
             {isLoading ? (
-              <div className="col-span-full py-20 text-center flex flex-col items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-4"></div>
-                <h3 className="text-lg font-semibold">Loading projects...</h3>
-                <p className="text-muted-foreground mt-2">
-                  Connecting to Supabase Database
+              <div className="col-span-full py-14 text-center flex flex-col items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
+                <h3 className="text-base font-semibold">Loading projects...</h3>
+                <p className="text-muted-foreground text-xs mt-1">
+                  Connecting to project database
                 </p>
               </div>
             ) : paginatedApps.length > 0 ? (
@@ -786,12 +517,12 @@ export default function App() {
                 />
               ))
             ) : (
-              <div className="col-span-full py-20 text-center">
-                <div className="bg-muted/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-8 h-8 text-muted-foreground opacity-20" />
+              <div className="col-span-full py-14 text-center">
+                <div className="bg-muted/50 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-7 h-7 text-muted-foreground opacity-20" />
                 </div>
-                <h3 className="text-lg font-semibold">No applications found</h3>
-                <p className="text-muted-foreground">
+                <h3 className="text-base font-semibold">No applications found</h3>
+                <p className="text-muted-foreground text-xs">
                   Try adjusting your search or filters to find what you're
                   looking for.
                 </p>
@@ -802,7 +533,7 @@ export default function App() {
                     setCategoryFilter("all");
                     setShowAll(true);
                   }}
-                  className="mt-2"
+                  className="mt-1 text-xs"
                 >
                   Clear all filters
                 </Button>
@@ -813,7 +544,7 @@ export default function App() {
 
         {/* ─── Pagination ─── */}
         {!isLoading && filteredApps.length > PAGE_SIZE && (
-          <div className="flex items-center justify-center gap-2 mt-10">
+          <div className="flex items-center justify-center gap-1.5 mt-6 sm:mt-8">
             <button
               className="pagination-btn"
               disabled={currentPage <= 1}
@@ -867,17 +598,19 @@ export default function App() {
         )}
       </main>
 
-      <footer className="border-t mt-20 py-8 bg-muted/30">
+      <footer className="border-t mt-8 sm:mt-12 py-5 sm:py-6 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center gap-3">
             <img
               src="/logo.svg"
-              alt="Intellibus Logo"
+              alt="Aivora Labs Logo"
               className="w-7 h-7"
             />
-            <span className="font-bold" style={{ color: '#0D5495' }}>INTELLIBUS</span>
+            <span className="font-bold bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              AIVORA LABS
+            </span>
             <span className="text-muted-foreground text-sm ml-2">
-              © 2026 Intellibus
+              © {new Date().getFullYear()} Aivora Labs. All rights reserved.
             </span>
           </div>
         </div>
@@ -953,7 +686,7 @@ function IframePreview({ url, appId, icon }: { url?: string; appId: string; icon
 // ─── App Card component ───
 
 interface AppCardProps {
-  app: AppData;
+  app: Project;
   viewMode: "grid" | "list";
   key?: string | number;
   onEdit: () => void;
@@ -991,23 +724,23 @@ function AppCard({ app, viewMode, onEdit, onDelete, onArchive }: AppCardProps) {
         className={`hover:shadow-md transition-shadow group overflow-hidden border-muted/60 card-hover-lift ${linkUrl ? "card-clickable" : ""}`}
         onClick={handleCardClick}
       >
-        <CardContent className="p-4 flex items-center gap-4">
+        <CardContent className="p-3 sm:p-3.5 flex items-center gap-3">
           {/* Small icon/gradient preview */}
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 shadow-xs"
             style={{ background: getGradientForId(app.id) }}
           >
-            <Icon className="w-5 h-5 text-white" />
+            <Icon className="w-4 h-4 text-white" />
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold group-hover:text-[var(--brand-mid)] transition-colors">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h3 className="font-serif text-xl sm:text-2xl font-normal group-hover:text-[var(--brand-mid)] transition-colors">
                 {app.name}
               </h3>
               <Badge
                 variant="secondary"
-                className="text-[10px] h-4 px-1.5 font-normal uppercase tracking-wider shrink-0"
+                className="text-[9px] h-4 px-1.5 font-bold uppercase tracking-luxury shrink-0"
               >
                 {app.category}
               </Badge>
@@ -1123,42 +856,42 @@ function AppCard({ app, viewMode, onEdit, onDelete, onArchive }: AppCardProps) {
         </DropdownMenu>
       </div>
 
-      <CardHeader className="pb-2 pt-4">
+      <CardHeader className="pb-1.5 pt-3 px-4">
         <div className="flex items-center gap-2 mb-1">
           <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
             style={{ background: getGradientForId(app.id) }}
           >
             <Icon className="w-3.5 h-3.5 text-white" />
           </div>
-          <CardTitle className="text-base group-hover:text-[var(--brand-mid)] transition-colors break-words">
+          <CardTitle className="text-lg sm:text-xl font-bold group-hover:text-[var(--brand-mid)] transition-colors break-words">
             {app.name}
           </CardTitle>
         </div>
-        <CardDescription className="line-clamp-2 min-h-[40px]">
+        <CardDescription className="line-clamp-2 text-xs leading-relaxed">
           {app.description}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-1 pb-4">
-        <div className="flex flex-col gap-2">
+      <CardContent className="flex-1 pb-2.5 px-4">
+        <div className="flex flex-col gap-1.5">
           <div className="flex items-center flex-wrap gap-1.5">
             <Badge
               variant="secondary"
-              className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0"
+              className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0"
             >
               {app.category}
             </Badge>
             {app.status !== "active" && (
               <Badge
                 variant={app.status === "beta" ? "outline" : "destructive"}
-                className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0"
+                className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0"
               >
                 {app.status}
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-0.5">
             {app.lead && (
               <div className="flex items-center">
                 <Users className="w-3 h-3 mr-1 opacity-70" />
@@ -1178,7 +911,7 @@ function AppCard({ app, viewMode, onEdit, onDelete, onArchive }: AppCardProps) {
 
       {/* Bottom bar: link indicator + docs button */}
       {(linkUrl || app.docsUrl) && (
-        <div className="px-4 pb-3 pt-0">
+        <div className="px-4 pb-2.5 pt-0">
           <div className="flex items-center justify-between gap-2">
             {linkUrl && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-[var(--brand-mid)] transition-colors min-w-0 overflow-hidden">
